@@ -1,4 +1,4 @@
-# This Game is Only 16 KB!
+# This Game Only Weighs 8 KB!
  A little Game I made for the Ludum Dare 54 Jam. The theme was "Limited Space", so I took it quite literally.
 *(Created by Guilherme Teres, @UnidayStudio)*
 
@@ -20,6 +20,8 @@ Code is a bit of a mess, but given the short amount of time I had, I'm happy wit
 ![Game Screenshot](./Docs/ld54-gamesize.png)
 
 **This was my first attempt to make an executable small**, I know that there are plenty of advanced techniques out there that I'm not using and that I could same a lot more space on  stack and not using any default lib, but I'l already happy with the result. 
+
+**UPDATE:** I managed to go from 16 KB to 8 KB by removing LIBC. :)
 
 **It was fun to develop this little project! :)**
 
