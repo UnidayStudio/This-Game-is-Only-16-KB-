@@ -25,7 +25,40 @@
 */
 #include <windows.h>
 #include <tchar.h>
-#include <stdio.h>
+
+// Since I'm not using LIBC, I can't use malloc, free and so on...
+#pragma region LIBC_IMPLEMENTATION
+
+extern "C" const int _fltused = 0;
+
+void* Malloc(size_t size){
+    return VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+}
+void Free(void* ptr){
+    VirtualFree(ptr, 0, MEM_RELEASE);
+}
+void MemCopy(void* dest, const void* src, size_t count) {
+    // Typecast src and dest addresses to (char *) 
+    char *csrc = (char *)src; 
+    char *cdest = (char *)dest; 
+    
+    // Copy contents of src[] to dest[] 
+    for (int i=0; i<count; i++) 
+        cdest[i] = csrc[i]; 
+}
+
+static long long int __randomSeed = 0;
+
+void RandomSeed(int seed){
+    __randomSeed = 42;
+}
+
+int Random(){
+    __randomSeed = (6364136223846793005ULL * __randomSeed + 1);
+    return static_cast<int>(__randomSeed >> 32);
+}
+
+#pragma endregion LIBC_IMPLEMENTATION
 
 #define WINDOW_WIDTH  512
 #define WINDOW_HEIGHT 512
@@ -48,11 +81,11 @@ static int canvasWidth  = 128;
 static int canvasHeight = 128;
 
 Color* NewBitMap(int width=GRID_RES, int height=GRID_RES){ 
-    return (Color*)malloc(sizeof(Color) * width * height); 
+    return (Color*)Malloc(sizeof(Color) * width * height); 
 }
 
 void DeleteBitMap(Color* ptr){ 
-    free(ptr); 
+    Free(ptr); 
 }
 
 unsigned char LerpColorChannel(unsigned char from, unsigned char to, unsigned char factor){
@@ -68,7 +101,7 @@ void GenerateRandomPattern(Color* bitmap, const Color& minVal, const Color& mask
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             const int id = y * width + x;
-            const unsigned char rVal = rand() % 256;
+            const unsigned char rVal = Random() % 256;
 
             bitmap[id].r = Max(minVal.r, unsigned char(rVal * (float(mask.r) / 255.f)));
             bitmap[id].g = Max(minVal.g, unsigned char(rVal * (float(mask.g) / 255.f)));
@@ -94,7 +127,7 @@ void BlitToCanvas(int gridX, int gridY, Color* bitmap){
 void FillBitmap(Color* bitmap, const Color& color, int width=GRID_RES, int height=GRID_RES){
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            memcpy_s(&bitmap[y * width + x], sizeof(Color), &color, sizeof(Color));
+            MemCopy(&bitmap[y * width + x], &color, sizeof(Color));
         }
     }
 }
@@ -103,7 +136,7 @@ void PaintCell(Color* bitmap, const Color& color, unsigned char* mask){
     for (int y = 0; y < GRID_RES; ++y) {
         for (int x = 0; x < GRID_RES; ++x) {
             if (mask[y] & (1 << x)){
-                memcpy_s(&bitmap[y * GRID_RES + x], sizeof(Color), &color, sizeof(Color));
+                MemCopy(&bitmap[y * GRID_RES + x], &color, sizeof(Color));
             }
         }
     }
@@ -177,7 +210,7 @@ void RestartLevel(){
 
 namespace Game{
     void Start(){
-        gameGrid = (Color**)malloc(sizeof(Color*) * GRID_SIZE * GRID_SIZE);
+        gameGrid = (Color**)Malloc(sizeof(Color*) * GRID_SIZE * GRID_SIZE);
 
         canvasWidth  = GRID_RES * GRID_SIZE;
         canvasHeight = GRID_RES * GRID_SIZE;
@@ -185,7 +218,7 @@ namespace Game{
         canvas = NewBitMap(canvasWidth, canvasHeight);
         FillBitmap(canvas, Color(0,0,0), canvasWidth, canvasHeight);
 
-        srand(42);
+        RandomSeed(42);
 
         // Creating the Ground:
         {
@@ -209,7 +242,7 @@ namespace Game{
         {
             player = NewBitMap();
             //FillBitmap(player, Color(0));
-            memcpy_s(player, sizeof(Color) * GRID_RES * GRID_RES, ground, sizeof(Color) * GRID_RES * GRID_RES);
+            MemCopy(player, ground, sizeof(Color) * GRID_RES * GRID_RES);
 
             unsigned char playerOutline[] = {
                 0b00011000, 0b00011000, 0b00111100, 0b01011010,
@@ -238,7 +271,7 @@ namespace Game{
         // Creating the Dots:
         {
             dotValid = NewBitMap();
-            memcpy_s(dotValid, sizeof(Color) * GRID_RES * GRID_RES, box, sizeof(Color) * GRID_RES * GRID_RES);
+            MemCopy(dotValid, box, sizeof(Color) * GRID_RES * GRID_RES);
             GenerateRandomPattern(dotValid, Color(0, 0, 100), Color(0, 140, 255, 150));
 
             dotInvalid = NewBitMap();
@@ -450,7 +483,7 @@ namespace Game{
     }
 
     void End(){
-        free(gameGrid);
+        Free(gameGrid);
 
         DeleteBitMap(canvas);
 
@@ -463,7 +496,8 @@ namespace Game{
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+//int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+int WINAPI WinMainCRTStartup(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     // Tutorial:
     MessageBoxW(NULL, L"The iodea behind this Project was to make the smallest game (in disk size) I could. This is how it turned out!\n\nTutorial:\n- Use W, A, S, D to move the character. \n- Press R to restart the Level if you got stuck.\n\nThe goal is to push all the boxes to the blue dots.", L"Welcome to Sokoban for Ludum Dare 54!", MB_ICONINFORMATION);
 
@@ -508,10 +542,13 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         {   
             Game::Update();
 
-            char* title = (char*)malloc(sizeof(char)*128); // I'm dynamically allocating this to save on the stack!
-            sprintf_s(title, 128, "[Level %d/%d] Sokoban (by @UnidayStudio)", currentLevel + 1, LEVEL_COUNT);
+            char title[] = "[Level X/X] Sokoban (by @UnidayStudio)";
+            title[7] = char(currentLevel + 1 + 48);
+            title[9] = char(LEVEL_COUNT + 48);
             SetWindowTextA(hwnd, title);
-            free(title);
+
+            //sprintf_s(title, 128, "[Level %d/%d] Sokoban (by @UnidayStudio)", currentLevel + 1, LEVEL_COUNT);
+            //Free(title);
                         
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);

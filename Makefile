@@ -21,10 +21,10 @@ CFLAGS := /std:c++17 /EHsc /MD $(GAME_INCLUDE_DIR)
 CFLAGS += /O1 /Os /nologo /W3 /Gw /GS-
 
 # Linker flags
-LDFLAGS := /NODEFAULTLIB:LIBCMT /SUBSYSTEM:WINDOWS /INCREMENTAL:NO 
+LDFLAGS := /NODEFAULTLIB /SUBSYSTEM:WINDOWS /INCREMENTAL:NO 
 LDFLAGS += /nologo /FILEALIGN:16 /ALIGN:128
 
-LIBS := user32.lib gdi32.lib #shell32.lib gdi32.lib Advapi32.lib ole32.lib oleaut32.lib
+LIBS := Kernel32.lib user32.lib gdi32.lib #shell32.lib gdi32.lib Advapi32.lib ole32.lib oleaut32.lib
 
 # Source files:				
 GAME_SRCS :=  $(wildcard $(GAME_SRC_DIR)/*.cpp)
