@@ -25,7 +25,7 @@
 */
 #include <windows.h>
 #include <tchar.h>
-#include <string>
+#include <stdio.h>
 
 #define WINDOW_WIDTH  512
 #define WINDOW_HEIGHT 512
@@ -508,8 +508,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         {   
             Game::Update();
 
-            std::wstring title = L"[Level " + std::to_wstring(currentLevel + 1) + L"/" + std::to_wstring(LEVEL_COUNT) + L"] Sokoban (by @UnidayStudio)";
-            SetWindowTextW(hwnd, title.c_str());
+            char* title = (char*)malloc(sizeof(char)*128); // I'm dynamically allocating this to save on the stack!
+            sprintf_s(title, 128, "[Level %d/%d] Sokoban (by @UnidayStudio)", currentLevel + 1, LEVEL_COUNT);
+            SetWindowTextA(hwnd, title);
+            free(title);
                         
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
