@@ -26,7 +26,11 @@
 *.a
 *.lib
 
+# Debug stuff:
+*.pdb
+
 # Executables
+Bin/
 *.exe
 *.out
 *.app
